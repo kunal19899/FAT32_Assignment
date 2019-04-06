@@ -1,5 +1,12 @@
+/*
+
+    Name: Kunal Samant
+    ID: 1001534662
+
+*/
+
 // The MIT License (MIT)
-// 
+//  ;[l]
 // Copyright (c) 2016, 2017 Trevor Bakker 
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,6 +36,7 @@
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
+#include <stdint.h>
 
 #define WHITESPACE " \t\n"      // We want to split our command line up into tokens
                                 // so we need to define what delimits our tokens.
@@ -46,18 +54,30 @@ int closed = TRUE;
 FILE * in;
 
 char BS_OEMName[8];
-int16_t BPB_BytsPerSec;
-int8_t BPB_SecPerClus;
-int16_t BPB_RsvdSecCnt;
-int8_t BPB_NumFATs;
+int16_t BPB_BytsPerSec; //////used
+int8_t BPB_SecPerClus; //used
+int16_t BPB_RsvdSecCnt; //used
+int8_t BPB_NumFATs; //usef
 int16_t BPB_RootEntCnt;
 char BS_VolLab[11];
-int32_t BPB_FATSz32;
+int32_t BPB_FATSz32; //used
 int32_t BPB_RootClus;
 
 int32_t RootDirSectors = 0;
 int32_t FirstDataSectors = 0;
 int32_t FirstSectorofCluster = 0;
+
+struct __attribute__((__packed__)) DirectoryEntry {
+  char DIR_Name[11];
+  uint8_t DIR_Attr;
+  uint8_t Unused1[8];
+  uint16_t DIR_FirstClusterHigh;
+  uint8_t Unused2[4];
+  uint16_t DIR_FirstClusterLow;
+  uint32_t DIR_FileSize;
+};
+
+struct DirectoryEntry dir[16];
 
 int main()
 {
@@ -108,11 +128,12 @@ int main()
     // Now print the tokenized input as a debug check
     // \TODO Remove this code and replace with your shell functionality
 
-    int token_index  = 0;
+    /*int token_index  = 0;
     for( token_index = 0; token_index < token_count; token_index ++ ) 
     {
       printf("token[%d] = %s\n", token_index, token[token_index] );  
-    }
+    }*/
+
 
     if (strcmp(token[0], "open") == 0)
     {
@@ -122,10 +143,16 @@ int main()
         continue;
       }
 
+      if (!closed)
+      {
+        printf("%s already opened!!\n", token[1]);
+        continue;
+      }
+      
+
       in = fopen(token[1], "rb");
       closed = FALSE;
       //printf("open");
-
       if (in == NULL)
       {
         printf("Error: File system image not found!\n");
@@ -136,12 +163,63 @@ int main()
 
     if (strcmp(token[0], "close") == 0)
     {
+      if (closed)
+      {
+        printf("Open a file first!!!\n");
+      }
       if (closed == FALSE)
       {
         fclose(in);
         closed = TRUE;
         //printf("close");
       }
+      continue;
+    }
+
+    if (strcmp(token[0], "info") == 0)
+    {
+      if (closed)
+      {
+        printf("Open a file first!!!\n");
+        continue;
+      }
+      fseek(in, 11, SEEK_SET);
+      fread(&BPB_BytsPerSec, 2, 1, in);
+      printf("BPB_BytesPerSec: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_BytsPerSec, BPB_BytsPerSec);
+
+      fseek(in, 13, SEEK_SET);
+      fread(&BPB_SecPerClus, 2, 1, in);
+      printf("BPB_SecPerClus: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_SecPerClus, BPB_SecPerClus);
+
+      fseek(in, 14, SEEK_SET);
+      fread(&BPB_RsvdSecCnt, 2, 1, in);
+      printf("BPB_RsvdSecCnt: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
+
+      fseek(in, 16, SEEK_SET);
+      fread(&BPB_NumFATs, 2, 1, in);
+      printf("BPB_NumFATs: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_NumFATs, BPB_NumFATs);
+
+      fseek(in, 36, SEEK_SET);
+      fread(&BPB_FATSz32, 2, 1, in);
+      printf("BPB_FATSz32: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_FATSz32, BPB_FATSz32);
+      continue;
+    }
+
+    if (strcmp(token[0], "stat") == 0)
+    {
+      if (closed)
+      {
+        printf("Open a file first!!!\n");
+        continue;
+      }
+
+      if (token[1] == NULL)
+      {
+        printf("<Open must have a second argument>\n");
+        continue;
+      }
+
+      
     }
 
     free(working_root);
