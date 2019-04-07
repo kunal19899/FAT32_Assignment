@@ -222,20 +222,40 @@ int main()
           printf("<""stat"" must have a second argument>\n");
           continue;
         }
-        else{
-          stat_file = fopen(token[1], "rb");
-          if(stat_file == NULL)
+        
+        char input[7];
+        strcpy(input, token[1]);
+
+        char expanded_name[12];
+        memset(expanded_name, ' ', 12);
+
+        char *token = strtok(input, ".");
+
+        strncpy(expanded_name, token, strlen(token));
+        
+        token = strtok( NULL, "." );
+
+        if (token)
+        {
+          strncpy((char*)(expanded_name + 8), token, strlen(token));
+        }
+
+        expanded_name[11] = '\0';
+
+        for (i = 0; i < 11; i++)
+        {
+          expanded_name[i] = toupper(expanded_name[i]);
+        }
+
+        for (i = 0; i < 16; i++)
+        {
+          if (strncmp(expanded_name, dir[i].DIR_Name, 11) == 0)
           {
-            printf("Error: File not found.\n");
-            continue;;
+            if ((dir[i].DIR_Attr != 53) && ((dir[i].DIR_Attr == 32) || (dir[i].DIR_Attr == 16) || (dir[i].DIR_Attr == 1)))
+            {
+              printf("Attribute: 0x%02x\t\tStarting Cluster Number: %d\n", dir[i].DIR_Attr, dir[i].DIR_FirstClusterLow);
+            }
           }
-
-          //fseek(stat_file, 0, SEEK_SET);
-          //fread(&dir[0]->DIR_Name, 11, 1, stat_file);
-
-          //printf("%s", );
-
-          //printf("");
         }
       }
 
