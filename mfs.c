@@ -1,7 +1,5 @@
 /*
-
     Name: Kunal Samant & Shivangi Vyas 
-
 */
 
 // The MIT License (MIT)
@@ -79,6 +77,62 @@ struct __attribute__((__packed__)) DirectoryEntry {
 };
 
 struct DirectoryEntry dir[16];
+
+int CheckFile(char *token[5])
+{
+	int i=1;
+	int flag=1;
+	if (token[1] == NULL)
+        {
+          printf("Must have a second argument>\n");
+          i=0;
+		  return i;
+        }
+        
+        char input[12];
+        strcpy(input, token[1]);
+
+        char expanded_name[12];
+        memset(expanded_name, ' ', 12);
+
+        char *tok = strtok(input, ".");
+
+        strncpy(expanded_name, tok, strlen(tok));
+        
+        tok = strtok( NULL, "." );
+
+        if (tok)
+        {
+          strncpy((char*)(expanded_name + 8), tok, strlen(tok));
+        }
+
+        expanded_name[11] = '\0';
+
+        for (i = 0; i < 11; i++)
+        {
+          expanded_name[i] = toupper(expanded_name[i]);
+        }
+		
+        for (i = 0; i < 16; i++)
+        {
+          if (strncmp(expanded_name, dir[i].DIR_Name, 11) == 0)
+          {
+            if ((dir[i].DIR_Attr != 53) && ((dir[i].DIR_Attr == 32) || (dir[i].DIR_Attr == 16) || (dir[i].DIR_Attr == 1)))
+            {
+			  return i+1;
+			  flag=0;
+            }
+			
+          }
+          
+        }
+		if(flag)
+		{
+			printf("Error: SOrry! File not found\n");
+			return 0;
+		}
+		
+}
 
 int main()
 {
@@ -217,52 +271,30 @@ int main()
 
       if (strcmp(token[0], "stat") == 0)
       {
-        if (token[1] == NULL)
-        {
-          printf("<""stat"" must have a second argument>\n");
-          continue;
-        }
-        
-        char input[7];
-        strcpy(input, token[1]);
-
-        char expanded_name[12];
-        memset(expanded_name, ' ', 12);
-
-        char *token = strtok(input, ".");
-
-        strncpy(expanded_name, token, strlen(token));
-        
-        token = strtok( NULL, "." );
-
-        if (token)
-        {
-          strncpy((char*)(expanded_name + 8), token, strlen(token));
-        }
-
-        expanded_name[11] = '\0';
-
-        for (i = 0; i < 11; i++)
-        {
-          expanded_name[i] = toupper(expanded_name[i]);
-        }
-
-        for (i = 0; i < 16; i++)
-        {
-          if (strncmp(expanded_name, dir[i].DIR_Name, 11) == 0)
-          {
-            if ((dir[i].DIR_Attr != 53) && ((dir[i].DIR_Attr == 32) || (dir[i].DIR_Attr == 16) || (dir[i].DIR_Attr == 1)))
-            {
-              printf("Attribute: 0x%02x\t\tStarting Cluster Number: %d\n", dir[i].DIR_Attr, dir[i].DIR_FirstClusterLow);
-            }
-          }
-          else{
-            printf("Error: File not found.\n");
-            break;
-          }
-        }
-      }
-
+		 int positive=CheckFile(token);
+        if((positive))
+		{
+			printf("Attribute: 0x%02x\t\tStarting Cluster Number: %d\n", dir[positive-1].DIR_Attr, dir[positive-1].DIR_FirstClusterLow);
+		}
+	  }
+		
+		 if (strcmp(token[0], "get") == 0)
+      {
+		 int positive=CheckFile(token);
+        if(!(positive))
+		{
+			
+		}
+	  }
+	   if (strcmp(token[0], "put") == 0)
+      {
+		 int positive=CheckFile(token);
+        if(!(positive))
+		{
+			
+		}
+	  }
+	  
       if (strcmp(token[0], "ls") == 0)
       {
         //printf("%d", ((BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec) +(BPB_RsvdSecCnt * BPB_BytsPerSec)));
@@ -283,6 +315,3 @@ int main()
   }
   return 0;
 }
-
-
-//1. BIOS Parameter Block
