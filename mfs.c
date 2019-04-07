@@ -1,7 +1,6 @@
 /*
 
-    Name: Kunal Samant
-    ID: 1001534662
+    Name: Kunal Samant & Shivangi Vyas 
 
 */
 
@@ -52,6 +51,8 @@
 
 int closed = TRUE;
 FILE * in;
+FILE * stat_file;
+int i;
 
 char BS_OEMName[8];
 int16_t BPB_BytsPerSec; //////used
@@ -97,6 +98,10 @@ int main()
     // is no input
     while(!fgets (cmd_str, MAX_COMMAND_SIZE, stdin));
 
+    if (strcmp(cmd_str, "\n") == 0) {
+      continue;
+    }
+
     /* Parse input */
     char *token[MAX_NUM_ARGUMENTS];
 
@@ -134,95 +139,126 @@ int main()
       printf("token[%d] = %s\n", token_index, token[token_index] );  
     }*/
 
-
-    if (strcmp(token[0], "open") == 0)
+    if(closed)
     {
-      if (token[1] == NULL)
+      if (strcmp(token[0], "open") == 0)
       {
-        printf("<Open must have a second argument>\n");
-        continue;
-      }
+        if (token[1] == NULL)
+        {
+          printf("<Open must have a second argument>\n");
+          continue;
+        }
+        
+        in = fopen(token[1], "rb");
+        closed = FALSE;
 
-      if (!closed)
-      {
-        printf("%s already opened!!\n", token[1]);
-        continue;
-      }
-      
+        fseek(in, 11, SEEK_SET);
+        fread(&BPB_BytsPerSec, 2, 1, in);
+    
+        fseek(in, 13, SEEK_SET);
+        fread(&BPB_SecPerClus, 2, 1, in);
+    
+        fseek(in, 14, SEEK_SET);
+        fread(&BPB_RsvdSecCnt, 2, 1, in);
+    
+        fseek(in, 16, SEEK_SET);
+        fread(&BPB_NumFATs, 2, 1, in);
+    
+        fseek(in, 36, SEEK_SET);
+        fread(&BPB_FATSz32, 2, 1, in);
 
-      in = fopen(token[1], "rb");
-      closed = FALSE;
-      //printf("open");
-      if (in == NULL)
-      {
-        printf("Error: File system image not found!\n");
+        fseek(in, ((BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec) +(BPB_RsvdSecCnt * BPB_BytsPerSec)), SEEK_SET);
+        for (i = 0; i < 16; i++)
+        {
+          fread(&dir[i], 32, 1, in);
+        }
+        
+        if (in == NULL)
+        {
+          printf("Error: File system image not found!\n");
+          continue;
+        }
         continue;
       }
-      continue;
+      else{
+        printf("OPEN A FILE FIRST!!\n");
+        continue;
+      }
     }
 
-    if (strcmp(token[0], "close") == 0)
+    if(!closed)
     {
-      if (closed)
+      if (strcmp(token[0], "open") == 0)
       {
-        printf("Open a file first!!!\n");
+        printf("File already opened!!\n");
+        continue;
       }
-      if (closed == FALSE)
+
+      if (strcmp(token[0], "close") == 0)
       {
         fclose(in);
         closed = TRUE;
         //printf("close");
       }
-      continue;
-    }
 
-    if (strcmp(token[0], "info") == 0)
-    {
-      if (closed)
+      if (strcmp(token[0], "info") == 0)
       {
-        printf("Open a file first!!!\n");
-        continue;
-      }
-      fseek(in, 11, SEEK_SET);
-      fread(&BPB_BytsPerSec, 2, 1, in);
-      printf("BPB_BytesPerSec: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_BytsPerSec, BPB_BytsPerSec);
-
-      fseek(in, 13, SEEK_SET);
-      fread(&BPB_SecPerClus, 2, 1, in);
-      printf("BPB_SecPerClus: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_SecPerClus, BPB_SecPerClus);
-
-      fseek(in, 14, SEEK_SET);
-      fread(&BPB_RsvdSecCnt, 2, 1, in);
-      printf("BPB_RsvdSecCnt: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
-
-      fseek(in, 16, SEEK_SET);
-      fread(&BPB_NumFATs, 2, 1, in);
-      printf("BPB_NumFATs: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_NumFATs, BPB_NumFATs);
-
-      fseek(in, 36, SEEK_SET);
-      fread(&BPB_FATSz32, 2, 1, in);
-      printf("BPB_FATSz32: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_FATSz32, BPB_FATSz32);
-      continue;
-    }
-
-    if (strcmp(token[0], "stat") == 0)
-    {
-      if (closed)
-      {
-        printf("Open a file first!!!\n");
-        continue;
+        if (closed)
+        {
+          printf("Open a file first!!!\n");
+          continue;;
+        }
+        printf("BPB_BytesPerSec: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_BytsPerSec, BPB_BytsPerSec);
+        printf("BPB_SecPerClus: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_SecPerClus, BPB_SecPerClus);
+        printf("BPB_RsvdSecCnt: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
+        printf("BPB_NumFATs: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_NumFATs, BPB_NumFATs);
+        printf("BPB_FATSz32: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_FATSz32, BPB_FATSz32);
       }
 
-      if (token[1] == NULL)
+      if (strcmp(token[0], "stat") == 0)
       {
-        printf("<Open must have a second argument>\n");
-        continue;
+        if (token[1] == NULL)
+        {
+          printf("<""stat"" must have a second argument>\n");
+          continue;
+        }
+        else{
+          stat_file = fopen(token[1], "rb");
+          if(stat_file == NULL)
+          {
+            printf("Error: File not found.\n");
+            continue;;
+          }
+
+          //fseek(stat_file, 0, SEEK_SET);
+          //fread(&dir[0]->DIR_Name, 11, 1, stat_file);
+
+          //printf("%s", );
+
+          //printf("");
+        }
       }
 
-      
+      if (strcmp(token[0], "ls") == 0)
+      {
+        //printf("%d", ((BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec) +(BPB_RsvdSecCnt * BPB_BytsPerSec)));
+        for (i = 0; i < 16; i++)
+        {
+          char string[12];
+          strcpy(string, dir[i].DIR_Name);
+          string[11] = '\0';
+          if ((dir[i].DIR_Attr != 53) && ((dir[i].DIR_Attr == 32) || (dir[i].DIR_Attr == 16) || (dir[i].DIR_Attr == 1)))
+          {
+            printf("%s\n", string);
+          }
+        }
+      }
     }
 
     free(working_root);
   }
   return 0;
 }
+
+
+//1. BIOS Parameter Block
