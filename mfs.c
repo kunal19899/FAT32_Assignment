@@ -256,6 +256,10 @@ int main()
               printf("Attribute: 0x%02x\t\tStarting Cluster Number: %d\n", dir[i].DIR_Attr, dir[i].DIR_FirstClusterLow);
             }
           }
+          else{
+            printf("Error: File not found.\n");
+            break;
+          }
         }
       }
 
