@@ -1,5 +1,7 @@
 /*
+
     Name: Kunal Samant & Shivangi Vyas 
+
 */
 
 // The MIT License (MIT)
@@ -50,6 +52,8 @@
 int closed = TRUE;
 FILE * in;
 FILE * stat_file;
+FILE * ofp;
+FILE *putFile;
 int i;
 
 char BS_OEMName[8];
@@ -66,6 +70,13 @@ int32_t RootDirSectors = 0;
 int32_t FirstDataSectors = 0;
 int32_t FirstSectorofCluster = 0;
 
+int LBAToOffset(int32_t sector)
+{
+    return ((sector - 2 ) * BPB_BytsPerSec) + (BPB_BytsPerSec * BPB_RsvdSecCnt) +
+          (BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec);
+
+}
+
 struct __attribute__((__packed__)) DirectoryEntry {
   char DIR_Name[11];
   uint8_t DIR_Attr;
@@ -78,56 +89,198 @@ struct __attribute__((__packed__)) DirectoryEntry {
 
 struct DirectoryEntry dir[16];
 
+int16_t NextLB ( uint32_t sector )
+{
+    uint32_t FATAddress = (BPB_BytsPerSec * BPB_RsvdSecCnt ) + ( sector * 4 );
+    int16_t val;
+    fseek( in, FATAddress, SEEK_SET);
+    fread( &val, 2, 1, in);
+    return val;
+}
+
 int CheckFile(char *token[5])
 {
 	int flag=1;
 	if (token[1] == NULL)
-        {
-          printf("Must have a second argument>\n");
-          flag=1;
-        }
+  {
+    printf("Must have a second argument>\n");
+    flag=1;
+  }
         
-        char input[12];
-        strcpy(input, token[1]);
+  char input[12];
+  strcpy(input, token[1]);
 
-        char expanded_name[12];
-        memset(expanded_name, ' ', 12);
+  char expanded_name[12];
+  memset(expanded_name, ' ', 12);
 
-        char *tok = strtok(input, ".");
+  char *tok = strtok(input, ".");
 
-        strncpy(expanded_name, tok, strlen(tok));
+  strncpy(expanded_name, tok, strlen(tok));
         
-        tok = strtok( NULL, "." );
+  tok = strtok( NULL, "." );
 
-        if (tok)
-        {
-          strncpy((char*)(expanded_name + 8), tok, strlen(tok));
-        }
+  if (tok)
+  {
+    strncpy((char*)(expanded_name + 8), tok, strlen(tok));
+  }
 
-        expanded_name[11] = '\0';
+  expanded_name[11] = '\0';
 
-        for (i = 0; i < 11; i++)
-        {
-          expanded_name[i] = toupper(expanded_name[i]);
-        }
-		
-        for (i = 0; i < 16; i++)
-        {
-          if (strncmp(expanded_name, dir[i].DIR_Name, 11) == 0)
-          {
-            if ((dir[i].DIR_Attr != 53) && ((dir[i].DIR_Attr == 32) || (dir[i].DIR_Attr == 16) || (dir[i].DIR_Attr == 1)))
-            {
-			  flag=0;
-            }
-			
-          }
-          
-        }
-		if(flag)
-		{
-			printf("Error: SOrry! File not found\n");
-		}
-		return flag;
+  for (i = 0; i < 11; i++)
+  {
+    expanded_name[i] = toupper(expanded_name[i]);
+  }
+    
+  int file;
+  for (i = 0; i < 16; i++)
+  {
+    if (strncmp(expanded_name, dir[i].DIR_Name, 11) == 0)
+    {
+      if ((dir[i].DIR_Attr != 53) && ((dir[i].DIR_Attr == 32) || (dir[i].DIR_Attr == 16) || (dir[i].DIR_Attr == 1)))
+      {
+        flag = 0;
+        file = i;
+        break;
+      }	
+    }
+    file = i;   
+  }
+  
+  if(flag)
+	{
+    printf("Error: Sorry! File not found\n");
+	}
+  
+  return file;
+}
+
+int compare(int i, char *filename)
+{
+  char expanded_name[12];
+  memset( expanded_name, ' ', 12 );
+
+  char *token = strtok(filename, "." );
+  
+  strncpy( expanded_name, token, strlen( token ) );
+
+  token = strtok( NULL, "." );
+  
+  if( token )
+  {
+    strncpy( (char*)(expanded_name+8), token, strlen(token ) );
+  }
+  
+  expanded_name[11] = '\0';
+
+  for( i = 0; i < 11; i++ )
+  {
+    expanded_name[i] = toupper( expanded_name[i] );
+  }
+
+  if( strncmp( expanded_name, dir[i].DIR_Name, 11 ) == 0 )
+  {
+    return 1;
+  }
+  else{
+    return 0;
+  }  
+}
+
+void get(char *filename)
+{
+  int found = 0;
+  for (i = 0; i < 16; i++)
+  {
+    if(compare(i, filename))
+    {
+      found = i;
+      break;
+    }
+  }
+
+  if (found == 0)
+  {
+    printf("Error: File not found.\n");
+    return;
+  }
+
+  int cluster = dir[i].DIR_FirstClusterLow;
+  int size = dir[i].DIR_FileSize;
+  int offset = LBAToOffset(cluster);
+
+  fseek(in, offset, SEEK_SET);
+  ofp = fopen(filename, "w");
+
+  char buffer[512];
+  fread(&buffer[0], 512, 1, in);
+  fwrite(&buffer[0], 512, 1, ofp);
+
+  size = size - 512;
+
+  while (size > 0)
+  {
+    cluster = NextLB(cluster);
+    int addr = LBAToOffset(cluster);
+    fseek(in, addr, SEEK_SET);
+    fread(&buffer[0], size, 1, in);
+    fwrite(&buffer[0], size, 1, ofp);
+  }
+
+  fclose(ofp);
+}
+
+void put(char *filename)
+{
+  putFile = fopen(filename, "rb");
+  if(putFile==NULL)
+  {
+    printf("File not found \n");
+  }
+  else
+  {
+
+  }
+  /*int found = 0;
+  for (i = 0; i < 16; i++)
+  {
+    if(compare(i, filename))
+    {
+      found = i;
+      break;
+    }
+    
+
+  }
+
+  if (found == 0)
+  {
+    printf("Error: File not found.\n");
+    return;
+  }
+
+  int cluster = dir[i].DIR_FirstClusterLow;
+  int size = dir[i].DIR_FileSize;
+  int offset = LBAToOffset(cluster);
+
+  fseek(ofp, offset, SEEK_SET);
+  in = fopen(filename, "w");
+
+  char buffer[512];
+  fread(&buffer[0], 512, 1, in);
+  fwrite(&buffer[0], 512, 1, ofp);
+
+  size = size - 512;
+
+  while (size > 0)
+  {
+    cluster = NextLB(cluster);
+    int addr = LBAToOffset(cluster);
+    fseek(ofp, addr, SEEK_SET);
+    fread(&buffer[0], size, 1, in);
+    fwrite(&buffer[0], size, 1, ofp);
+  }*/
+
+  fclose(putFile);
 }
 
 int main()
@@ -182,12 +335,6 @@ int main()
 
     // Now print the tokenized input as a debug check
     // \TODO Remove this code and replace with your shell functionality
-
-    /*int token_index  = 0;
-    for( token_index = 0; token_index < token_count; token_index ++ ) 
-    {
-      printf("token[%d] = %s\n", token_index, token[token_index] );  
-    }*/
 
     if(closed)
     {
@@ -253,11 +400,6 @@ int main()
 
       if (strcmp(token[0], "info") == 0)
       {
-        if (closed)
-        {
-          printf("Open a file first!!!\n");
-          continue;;
-        }
         printf("BPB_BytesPerSec: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_BytsPerSec, BPB_BytsPerSec);
         printf("BPB_SecPerClus: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_SecPerClus, BPB_SecPerClus);
         printf("BPB_RsvdSecCnt: \n\tDecimal: %d\tHexadecimal: 0x%04x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
@@ -267,30 +409,19 @@ int main()
 
       if (strcmp(token[0], "stat") == 0)
       {
-		 int positive=CheckFile(token);
-        if(!(positive))
-		{
-			printf("Attribute: 0x%02x\t\tStarting Cluster Number: %d\n", dir[i].DIR_Attr, dir[i].DIR_FirstClusterLow);
-		}
-	  }
-		
-		 if (strcmp(token[0], "get") == 0)
-      {
-		 int positive=CheckFile(token);
-        if(!(positive))
-		{
-			
-		}
-	  }
-	   if (strcmp(token[0], "put") == 0)
-      {
-		 int positive=CheckFile(token);
-        if(!(positive))
-		{
-			
-		}
-	  }
-	  
+        if (token[1] == NULL)
+        {
+          printf("<stat must have a second argument>\n");
+          continue;
+        }
+
+        int positive = CheckFile(token);
+        if(positive < 15)
+		    {
+			    printf("Attribute: 0x%02x\t\tStarting Cluster Number: %d\n", dir[i].DIR_Attr, dir[i].DIR_FirstClusterLow);
+		    }
+	    }
+
       if (strcmp(token[0], "ls") == 0)
       {
         //printf("%d", ((BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec) +(BPB_RsvdSecCnt * BPB_BytsPerSec)));
@@ -305,9 +436,95 @@ int main()
           }
         }
       }
+
+      if (strcmp(token[0], "cd") == 0)
+      {
+        if (token[1] == NULL)
+        {
+          printf("<""cd"" must have a second argument>\n");
+          continue;
+        }
+
+        char *direc = strtok(token[1], "/");
+
+        while(direc != NULL)
+        {
+          //printf("%s\n", direc);
+          chdir(direc);
+          direc = strtok(NULL, "/");
+        }
+        
+      }
+
+      if (strcmp(token[0], "get") == 0)
+      {
+        get(token[1]);
+      }
+
+      if (strcmp(token[0], "put") == 0)
+      {
+        put(token[1]);
+      }
+      /*if (strcmp(token[0], "read") == 0)
+      {
+        int index = 0 ;
+        char name[12];
+        memset( name, 0, 12);
+        strncpy( name, "           ", 11);
+        char* tok = strtok(token[1], ".");
+        int a = strlen(tok);
+        strncpy(name, token[1], a);
+        tok = strtok(NULL, ".");
+        strncpy(&name[11-a], tok, 3);
+        
+        int i =0;
+        for (i = 0 ; i <= 11 ; i++)
+        {
+          name[i] = toupper(name[i]);
+        }
+        //printf("name :%s", name );
+  
+        for (i = 0 ; i < 11 ; i++)
+        { 
+          if (strncmp(name, dir[i].DIR_Name, 11) == 0 )
+          {
+            index = i;
+            //printf("index in: %d\n", i);
+          }
+          
+        }
+        
+        int user_offset = atoi(token[2]);
+        //printf("token%d\n", user_offset);
+        int block = dir[index].DIR_FirstClusterLow;
+        //printf("block %d\n", block);
+        
+        while (user_offset > BPB_BytsPerSec)
+        {
+          block = NextLB( block );
+          user_offset -= BPB_BytsPerSec;
+        }
+        // printf("block %d\n", block);
+        // printf("user_offset %d\n", user_offset);
+        
+        //block has the data
+        int file_offset = LBAToOFFset(block);
+        fseek( in, file_offset + user_offset, SEEK_SET);
+        
+        uint8_t value;
+        int user_count = atoi(token[3]);
+      
+        for (i= 1; i <= user_count; i++ )
+        {
+          fread( &value, 1, 1, in);
+          printf("Read value : %d \n", value );
+        }
+        printf("\n");
+      }*/
     }
 
     free(working_root);
   }
   return 0;
 }
+
