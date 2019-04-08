@@ -1,7 +1,5 @@
 /*
-
     Name: Kunal Samant & Shivangi Vyas 
-
 */
 
 // The MIT License (MIT)
@@ -55,6 +53,7 @@ FILE * stat_file;
 FILE * ofp;
 FILE *putFile;
 int i;
+char buffer[512];
 
 char BS_OEMName[8];
 int16_t BPB_BytsPerSec; //////used
@@ -154,7 +153,7 @@ int CheckFile(char *token[5])
   return file;
 }
 
-int compare(int i, char *filename)
+int compare(int k, char *filename)
 {
   char expanded_name[12];
   memset( expanded_name, ' ', 12 );
@@ -172,18 +171,56 @@ int compare(int i, char *filename)
   
   expanded_name[11] = '\0';
 
-  for( i = 0; i < 11; i++ )
+  int j;
+  for( j = 0; j < 11; j++ )
   {
-    expanded_name[i] = toupper( expanded_name[i] );
+    expanded_name[j] = toupper( expanded_name[j] );
   }
 
-  if( strncmp( expanded_name, dir[i].DIR_Name, 11 ) == 0 )
+  if( strncmp( expanded_name, dir[k].DIR_Name, 11 ) == 0 )
   {
     return 1;
   }
   else{
     return 0;
   }  
+}
+
+int compare_put(char *filename, char *buffer)
+{
+  char expanded_name[12];
+  memset( expanded_name, ' ', 12 );
+
+  char *token = strtok(filename, "." );
+  
+  strncpy( expanded_name, token, strlen( token ) );
+
+  token = strtok( NULL, "." );
+  
+  if( token )
+  {
+    strncpy( (char*)(expanded_name+8), token, strlen(token ) );
+  }
+  
+  expanded_name[11] = '\0';
+
+  int j;
+  for( j = 0; j < 11; j++ )
+  {
+    expanded_name[j] = toupper( expanded_name[j] );
+  }
+
+  char buff[12];
+  strcpy(buff, buffer);
+  buff[11] = '\0';
+
+  if( strncmp( expanded_name, buffer, 11 ) != 0 )
+  {
+    return 1;
+  }
+  else{
+    return 0;
+  } 
 }
 
 void get(char *filename)
@@ -193,7 +230,7 @@ void get(char *filename)
   {
     if(compare(i, filename))
     {
-      found = i;
+      found = i+1;
       break;
     }
   }
@@ -210,7 +247,6 @@ void get(char *filename)
 
   fseek(in, offset, SEEK_SET);
   ofp = fopen(filename, "w");
-
   char buffer[512];
   fread(&buffer[0], 512, 1, in);
   fwrite(&buffer[0], 512, 1, ofp);
@@ -231,46 +267,30 @@ void get(char *filename)
 
 void put(char *filename)
 {
-  putFile = fopen(filename, "rb");
-  if(putFile==NULL)
-  {
-    printf("File not found \n");
-  }
-  else
-  {
-
-  }
-  /*int found = 0;
+  int found = 0;
   for (i = 0; i < 16; i++)
   {
-    if(compare(i, filename))
+    if(compare_put(dir[i].DIR_Name, buffer))
     {
-      found = i;
+      found = i+1;
       break;
     }
     
-
   }
-
   if (found == 0)
   {
     printf("Error: File not found.\n");
     return;
   }
-
   int cluster = dir[i].DIR_FirstClusterLow;
   int size = dir[i].DIR_FileSize;
   int offset = LBAToOffset(cluster);
-
   fseek(ofp, offset, SEEK_SET);
   in = fopen(filename, "w");
-
-  char buffer[512];
+  //char buffer[512];
   fread(&buffer[0], 512, 1, in);
   fwrite(&buffer[0], 512, 1, ofp);
-
   size = size - 512;
-
   while (size > 0)
   {
     cluster = NextLB(cluster);
@@ -278,9 +298,9 @@ void put(char *filename)
     fseek(ofp, addr, SEEK_SET);
     fread(&buffer[0], size, 1, in);
     fwrite(&buffer[0], size, 1, ofp);
-  }*/
+  }
 
-  fclose(putFile);
+  fclose(ofp);
 }
 
 int main()
@@ -465,6 +485,8 @@ int main()
       {
         put(token[1]);
       }
+
+      
       /*if (strcmp(token[0], "read") == 0)
       {
         int index = 0 ;
@@ -527,4 +549,3 @@ int main()
   }
   return 0;
 }
-
