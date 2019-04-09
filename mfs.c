@@ -1,6 +1,7 @@
 /*
     Name: Kunal Samant & Shivangi Vyas 
-	Please compile with gcc mfs.c -o mfs
+          (1001534662)    (1001xx0499)
+	  Please compile with gcc mfs.c -o mfs
 */
 
 // The MIT License (MIT)
@@ -50,10 +51,7 @@
 
 int closed = TRUE;
 FILE * in;
-FILE * stat_file;
 FILE * ofp;
-FILE *putFile;
-//int i;
 char buffer[512];
 
 char BS_OEMName[8];
@@ -106,7 +104,7 @@ int CheckFile(char *token[5])
   {
     printf("Must have a second argument!!\n\n");
     file=100;
-	return file;
+	  return file;
   }
         
   char input[12];
@@ -144,20 +142,19 @@ int CheckFile(char *token[5])
         file = i;
         break;
       }	
-    }
-      
+    }    
   }
   
   if(flag)
 	{
     printf("Error: Sorry! File not found\n\n");
-	file=100;
+	  file=100;
 	}
   
   return file;
 }
 
-int compare(int k, char *filename)
+char* resize(char *filename)
 {
   char expanded_name[12];
   memset( expanded_name, ' ', 12 );
@@ -181,14 +178,8 @@ int compare(int k, char *filename)
     expanded_name[j] = toupper( expanded_name[j] );
   }
   token=NULL;
-  if( strncmp( expanded_name, dir[k].DIR_Name, 11 ) == 0 )
-  {
-    return 1;
-  }
-  else{
-    return 0;
-  }  
-  
+
+  return expanded_name;
 }
 
 int compare_put(char *filename, char *buffer)
@@ -297,11 +288,36 @@ void put(char *token[5])
   }
 }
 
+int findIndex(int clus, char *filename)
+{
+  if (!clus)
+  {
+    return -1;
+  }
+
+  char *file_name = resize(filename);
+
+  int i;
+  for (i = 0; i < 16; i++)
+  {
+    char string[12];
+    memcpy(string, dir[i].DIR_Name, 11);
+    string[11] = '\0';
+
+    if (strcmp(file_name, string) == 0)
+    {
+      return i;
+    }
+  }
+  return -1; 
+}
+
 int main()
 {
 
   system("clear");
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
+  int RootClus, currClus;
 
   while( 1 )
   {
@@ -352,6 +368,11 @@ int main()
 
     if(closed)
     {
+      if (strcmp(token[0], "exit") == 0 || strcmp(token[0], "quit") == 0) 
+      {
+        break;
+      }
+
       if (strcmp(token[0], "open") == 0)
       {
         if (token[1] == NULL)
@@ -361,7 +382,8 @@ int main()
         }
         
         in = fopen(token[1], "rb");
-		 if (in == NULL)
+
+		    if (in == NULL)
         {
           printf("Error: File system image not found!\n\n");
           continue;
@@ -383,8 +405,10 @@ int main()
         fseek(in, 36, SEEK_SET);
         fread(&BPB_FATSz32, 2, 1, in);
 
+        RootClus = (BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec) +(BPB_RsvdSecCnt * BPB_BytsPerSec);
+        currClus = (BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec) +(BPB_RsvdSecCnt * BPB_BytsPerSec);
         fseek(in, ((BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec) +(BPB_RsvdSecCnt * BPB_BytsPerSec)), SEEK_SET);
-		int i;
+		    int i;
         for (i = 0; i < 16; i++)
         {
           fread(&dir[i], 32, 1, in);
@@ -408,14 +432,12 @@ int main()
       if (strcmp(token[0], "close") == 0)
       {
         fclose(in);
-        closed = TRUE;
-        
+        closed = TRUE;   
       }
 		
-	  if (strcmp(token[0], "exit") == 0)
+	    if (strcmp(token[0], "exit") == 0)
       {
-        return 0;
-        
+        return 0; 
       }
       if (strcmp(token[0], "info") == 0)
       {
@@ -458,20 +480,56 @@ int main()
 
       if (strcmp(token[0], "cd") == 0)
       {
+        int i,parClus;
         if (token[1] == NULL)
         {
-          printf("<""cd"" must have a second argument>\n\n");
+          printf("cd must have a second arguments\n\n");
           continue;
         }
 
-        char *direc = strtok(token[1], "/");
-
-        while(direc != NULL)
+        if (strcmp(token[1], "..") == 0)
         {
-          chdir(direc);
-          direc = strtok(NULL, "/");
+          if (RootClus = currClus)
+          {
+            continue;
+          }
+
+         
+          i =CheckFile(token);
+            if (i!=100)
+              {
+           parClus = dir[i].DIR_FirstClusterLow;
+              }
+          
+
+          if (parClus == 0)
+          {
+            currClus = RootClus;
+          }
+          else{
+            currClus = LBAToOffset(parClus);
+          }
+          continue;
         }
-        
+
+        int index = findIndex(currClus, token[1]);
+
+        if (index != -1)
+        {
+          int newClus = dir[index].DIR_FirstClusterLow;
+          currClus = LBAToOffset(newClus);
+          
+          for(i=0;i<16;i++)
+          {
+            fseek(in,currClus+(i*32),SEEK_SET);
+            fread(&dir[i],32,1,in);
+          }
+        }
+
+        else{
+          printf("Error: File not found.\n");
+          continue;
+        }
       }
 
       if (strcmp(token[0], "get") == 0)
@@ -484,46 +542,44 @@ int main()
         put(token);
       }
 	  
-	  if (strcmp(token[0], "read") == 0)
-	  {
-		int found = 0;
-		int i;
-		i = CheckFile(token);
-	  if(i==100)
-	  {
-		  return ;
-	  }
-	  else
-	  {
-		char *filename=token[1];
-		int cluster = dir[i].DIR_FirstClusterLow;
-		int size = atoi(token[3]);
-		int offset = LBAToOffset(cluster);
+      if (strcmp(token[0], "read") == 0)
+      {
+        if ((token[1] == NULL) || (token[2] == NULL) || (token[3] == NULL))
+        {
+          printf("read must have 3 arguments\n\n");
+          continue;
+        }
 
-		fseek(in, offset, SEEK_SET);
-		ofp = fopen(filename, "wb");
-		fread(&buffer[0], 512, 1, ofp);
-//		fwrite(&buffer[0], 512, 1, in);
-		printf("%d
+        int index = findIndex(currClus, token[1]);
 
-		size = size - 512;
+        if (index != -1)
+        {
+          int position = atoi(token[2]);
+          int numByts = atoi(token[3]);
 
-		  while (size > 0)
-		  {
-			cluster = NextLB(cluster);
-			int addr = LBAToOffset(cluster);
-			fseek(in, addr, SEEK_SET);
-			fread(&buffer[0], size, 1, ofp);
-			fwrite(&buffer[0], size, 1, in);
-			size=size-512;
-		  }
-		  fclose(ofp);
-	  }
+          int lowClus = dir[index].DIR_FirstClusterLow;
+          int size = dir[index].DIR_FileSize;
+
+          int offset = LBAToOffset(lowClus);
+
+          fseek(in, offset, SEEK_SET);
+          uint8_t buff[position + numByts];
+          fread(&buff, position + numByts, 1, in);
+
+          int i;
+          for (i = 0; i < position + numByts; i++)
+          {
+            printf("%x", buff[i]);
+            printf("\n");
+          }
+        }
+        else{
+          printf("Error: File not found\n");
+          continue;
+        }
+      }
+      free(working_root);
     }
-
-    free(working_root);
   }
   return 0;
 }
-}
-
