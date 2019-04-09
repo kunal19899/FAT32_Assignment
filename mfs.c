@@ -52,7 +52,7 @@ FILE * in;
 FILE * stat_file;
 FILE * ofp;
 FILE *putFile;
-int i;
+//int i;
 char buffer[512];
 
 char BS_OEMName[8];
@@ -125,6 +125,7 @@ int CheckFile(char *token[5])
 
   expanded_name[11] = '\0';
 
+  int i;
   for (i = 0; i < 11; i++)
   {
     expanded_name[i] = toupper(expanded_name[i]);
@@ -171,10 +172,10 @@ int compare(int k, char *filename)
   
   expanded_name[11] = '\0';
 
-  int j;
-  for( j = 0; j < 11; j++ )
+  int i;
+  for( i = 0; i < 11; i++ )
   {
-    expanded_name[j] = toupper( expanded_name[j] );
+    expanded_name[i] = toupper( expanded_name[i] );
   }
 
   if( strncmp( expanded_name, dir[k].DIR_Name, 11 ) == 0 )
@@ -226,6 +227,7 @@ int compare_put(char *filename, char *buffer)
 void get(char *filename)
 {
   int found = 0;
+  int i;
   for (i = 0; i < 16; i++)
   {
     if(compare(i, filename))
@@ -268,6 +270,7 @@ void get(char *filename)
 void put(char *filename)
 {
   int found = 0;
+  int i;
   for (i = 0; i < 16; i++)
   {
     if(compare_put(dir[i].DIR_Name, buffer))
@@ -385,6 +388,7 @@ int main()
         fread(&BPB_FATSz32, 2, 1, in);
 
         fseek(in, ((BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec) +(BPB_RsvdSecCnt * BPB_BytsPerSec)), SEEK_SET);
+        int i;
         for (i = 0; i < 16; i++)
         {
           fread(&dir[i], 32, 1, in);
@@ -438,13 +442,14 @@ int main()
         int positive = CheckFile(token);
         if(positive < 15)
 		    {
-			    printf("Attribute: 0x%02x\t\tStarting Cluster Number: %d\n", dir[i].DIR_Attr, dir[i].DIR_FirstClusterLow);
+			    printf("Attribute: 0x%02x\t\tStarting Cluster Number: %d\n", dir[positive].DIR_Attr, dir[positive].DIR_FirstClusterLow);
 		    }
 	    }
 
       if (strcmp(token[0], "ls") == 0)
       {
         //printf("%d", ((BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec) +(BPB_RsvdSecCnt * BPB_BytsPerSec)));
+        int i;
         for (i = 0; i < 16; i++)
         {
           char string[12];
@@ -465,14 +470,7 @@ int main()
           continue;
         }
 
-        char *direc = strtok(token[1], "/");
-
-        while(direc != NULL)
-        {
-          //printf("%s\n", direc);
-          chdir(direc);
-          direc = strtok(NULL, "/");
-        }
+        
         
       }
 
