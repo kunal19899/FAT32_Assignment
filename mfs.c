@@ -483,9 +483,47 @@ int main()
       {
         put(token);
       }
+	  
+	  if (strcmp(token[0], "read") == 0)
+	  {
+		int found = 0;
+		int i;
+		i = CheckFile(token);
+	  if(i==100)
+	  {
+		  return ;
+	  }
+	  else
+	  {
+		char *filename=token[1];
+		int cluster = dir[i].DIR_FirstClusterLow;
+		int size = atoi(token[3]);
+		int offset = LBAToOffset(cluster);
+
+		fseek(in, offset, SEEK_SET);
+		ofp = fopen(filename, "wb");
+		fread(&buffer[0], 512, 1, ofp);
+//		fwrite(&buffer[0], 512, 1, in);
+		printf("%d
+
+		size = size - 512;
+
+		  while (size > 0)
+		  {
+			cluster = NextLB(cluster);
+			int addr = LBAToOffset(cluster);
+			fseek(in, addr, SEEK_SET);
+			fread(&buffer[0], size, 1, ofp);
+			fwrite(&buffer[0], size, 1, in);
+			size=size-512;
+		  }
+		  fclose(ofp);
+	  }
     }
 
     free(working_root);
   }
   return 0;
 }
+}
+
