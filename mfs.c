@@ -182,41 +182,9 @@ char* resize(char *filename)
   return expanded_name;
 }
 
-int compare_put(char *filename, char *buffer)
+int compare_put(char *filename)
 {
-  char expanded_name[12];
-  memset( expanded_name, ' ', 12 );
-
-  char *token = strtok(filename, "." );
   
-  strncpy( expanded_name, token, strlen( token ) );
-
-  token = strtok( NULL, "." );
-  
-  if( token )
-  {
-    strncpy( (char*)(expanded_name+8), token, strlen(token ) );
-  }
-  
-  expanded_name[11] = '\0';
-
-  int j;
-  for( j = 0; j < 11; j++ )
-  {
-    expanded_name[j] = toupper( expanded_name[j] );
-  }
-
-  char buff[12];
-  strcpy(buff, buffer);
-  buff[11] = '\0';
-
-  if( strncmp( expanded_name, buffer, 11 ) != 0 )
-  {
-    return 1;
-  }
-  else{
-    return 0;
-  } 
 }
 
 void get(char *token[5])
@@ -254,11 +222,12 @@ void get(char *token[5])
   fclose(ofp);
 }
 }
+
 void put(char *token[5])
 {
 	int found = 0;
 	int i;
-  i = CheckFile(token);
+	i = CheckFile(token);
   if(i==100)
   {
 	  return ;
@@ -269,8 +238,8 @@ void put(char *token[5])
   int cluster = dir[i].DIR_FirstClusterLow;
   int size = dir[i].DIR_FileSize;
   int offset = LBAToOffset(cluster);
-  fseek(ofp, offset, SEEK_SET);
-  in = fopen(filename, "w");
+  fseek(in, offset, SEEK_SET);
+  ofp = fopen(filename, "w");
   fread(&buffer[0], 512, 1, in);
   fwrite(&buffer[0], 512, 1, ofp);
   size = size - 512;
@@ -278,7 +247,7 @@ void put(char *token[5])
   {
     cluster = NextLB(cluster);
     int addr = LBAToOffset(cluster);
-    fseek(ofp, addr, SEEK_SET);
+    fseek(in, addr, SEEK_SET);
     fread(&buffer[0], size, 1, in);
     fwrite(&buffer[0], size, 1, ofp);
 	size = size - 512;
@@ -487,6 +456,50 @@ int main()
           continue;
         }
 
+		///////////////////////////////////////////////
+		
+		/*char parts[100];
+		char tok[12];
+		strcpy(input, token[1]);
+
+		char expanded_name[12];
+		memset(expanded_name, ' ', 12);
+
+		char *tok = strtok(input, "/");
+
+		strncpy(, tok, strlen(tok));
+        
+		tok = strtok( NULL, "/" );
+
+		if (tok)
+		{
+			strncpy((char*)(expanded_name + 8), tok, strlen(tok));
+		}
+
+		expanded_name[11] = '\0';
+
+		int i;
+		for (i = 0; i < 11; i++)
+		{
+			expanded_name[i] = toupper(expanded_name[i]);
+		}*/
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		/////////////////////////////////////////
+		
         if (strcmp(token[1], "..") == 0)
         {
           if (RootClus == currClus)
