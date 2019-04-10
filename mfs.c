@@ -52,6 +52,7 @@
 int closed = TRUE;
 FILE * in;
 FILE * ofp;
+FILE * put_file;
 char buffer[512];
 
 char BS_OEMName[8];
@@ -182,9 +183,41 @@ char* resize(char *filename)
   return expanded_name;
 }
 
-int compare_put(char *filename)
+int compare_put(char *filename, char *buffer)
 {
+  char expanded_name[12];
+  memset( expanded_name, ' ', 12 );
+
+  char *token = strtok(filename, "." );
   
+  strncpy( expanded_name, token, strlen( token ) );
+
+  token = strtok( NULL, "." );
+  
+  if( token )
+  {
+    strncpy( (char*)(expanded_name+8), token, strlen(token ) );
+  }
+  
+  expanded_name[11] = '\0';
+
+  int j;
+  for( j = 0; j < 11; j++ )
+  {
+    expanded_name[j] = toupper( expanded_name[j] );
+  }
+
+  char buff[12];
+  strcpy(buff, buffer);
+  buff[11] = '\0';
+
+  if( strncmp( expanded_name, buffer, 11 ) != 0 )
+  {
+    return 1;
+  }
+  else{
+    return 0;
+  } 
 }
 
 void get(char *token[5])
@@ -222,38 +255,53 @@ void get(char *token[5])
   fclose(ofp);
 }
 }
-
 void put(char *token[5])
 {
 	int found = 0;
-	int i;
-	i = CheckFile(token);
+  int i;
+  /*
+  i = CheckFile(token);
   if(i==100)
   {
 	  return ;
+  }*/
+
+  put_file = fopen(token[1], "w");
+  if (put == NULL)
+  {
+    printf("Error: File not found");
   }
   else
   {  
+    //int i;
+    for(i=0;i<16;i++)
+    {
+    if (dir[i].DIR_Name[0] == '0x00' || dir[i].DIR_Name[0]=='0xE5') //&& ((dir[e].DIR_Attr == 32) || (dir[e].DIR_Attr == 16) || (dir[e].DIR_Attr == 1)))
+    {
+      
   char *filename=token[1];
   int cluster = dir[i].DIR_FirstClusterLow;
   int size = dir[i].DIR_FileSize;
   int offset = LBAToOffset(cluster);
-  fseek(in, offset, SEEK_SET);
-  ofp = fopen(filename, "w");
+  fseek(put, offset, SEEK_SET);
+  in = fopen(filename, "w");
   fread(&buffer[0], 512, 1, in);
-  fwrite(&buffer[0], 512, 1, ofp);
+  fwrite(&buffer[0], 512, 1, put);
   size = size - 512;
   while (size > 0)
   {
     cluster = NextLB(cluster);
     int addr = LBAToOffset(cluster);
-    fseek(in, addr, SEEK_SET);
+    fseek(put, addr, SEEK_SET);
     fread(&buffer[0], size, 1, in);
-    fwrite(&buffer[0], size, 1, ofp);
+    fwrite(&buffer[0], size, 1, put);
 	size = size - 512;
   }
 
-  fclose(ofp);
+  fclose(put);
+  }
+
+}
   }
 }
 
@@ -456,69 +504,19 @@ int main()
           continue;
         }
 
-		///////////////////////////////////////////////
-		
-		/*char parts[100];
-		char tok[12];
-		strcpy(input, token[1]);
-
-		char expanded_name[12];
-		memset(expanded_name, ' ', 12);
-
-		char *tok = strtok(input, "/");
-
-		strncpy(, tok, strlen(tok));
-        
-		tok = strtok( NULL, "/" );
-
-		if (tok)
-		{
-			strncpy((char*)(expanded_name + 8), tok, strlen(tok));
-		}
-
-		expanded_name[11] = '\0';
-
-		int i;
-		for (i = 0; i < 11; i++)
-		{
-			expanded_name[i] = toupper(expanded_name[i]);
-		}*/
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		/////////////////////////////////////////
-		
         if (strcmp(token[1], "..") == 0)
         {
-          if (RootClus == currClus)
+          if (RootClus = currClus)
           {
             continue;
           }
 
          
-         // i =CheckFile(token);
-            //if (i!=100)
-             // {
-			fseek(in, ((BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec) +(BPB_RsvdSecCnt * BPB_BytsPerSec)), SEEK_SET);
-			int i;
-			for (i = 0; i < 16; i++)
-			{
-				fread(&dir[i], 32, 1, in);
-			}
-			parClus = dir[1].DIR_FirstClusterLow;
-              //}
+          i =CheckFile(token);
+            if (i!=100)
+              {
+           parClus = dir[i].DIR_FirstClusterLow;
+              }
           
 
           if (parClus == 0)
